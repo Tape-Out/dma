@@ -25,11 +25,6 @@ regs:
     desc: byte count per channel
     array: { count: channels, stride: 16 }
     fields: [ { name: val, width: 24, sw: rw, hw: r, reset: 0 } ]
-  - name: desc
-    offset: 0x300
-    desc: scatter gather descriptor pointer
-    feature: sg
-    fields: [ { name: val, width: 32, sw: rw, hw: r, reset: 0 } ]
   - name: ista
     offset: 0x400
     desc: done status, write one to clear
