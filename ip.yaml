@@ -51,35 +51,35 @@ deps:
 area:
   base:
     points:
-      '1': 2723.84
-      '2': 4152.4
-      '4': 6536.6
-      '8': 11326.56
+      '1': 2695.84
+      '2': 4127.76
+      '4': 6629.84
+      '8': 11372.48
     per: channels
-  margin: 0.0333
+  margin: 0.0186
   model: points-additive
   error:
-    bound: 0.022
+    bound: 0.011
     sign: over
     note: parameter curves stored as measured points, features added on top, then
-      lifted by 0.0333 so that no untested combination predicts under; the worst came
-      in 2.83 percent under before the lift
+      lifted by 0.0186 so that no untested combination predicts under; the worst came
+      in 1.36 percent under before the lift
   measured:
   - at:
       channels: 1
-    um2: 2723.84
+    um2: 2695.84
   - at:
       channels: 2
-    um2: 4152.4
+    um2: 4127.76
   - at:
       channels: 4
-    um2: 6536.6
+    um2: 6629.84
   - at:
       channels: 8
-    um2: 11326.56
+    um2: 11372.48
   corner:
     tool: ecc
     pdk: ics55
     freq_mhz: 100
-    measured: '2026-09-08'
-    gen_digest: sha256:abdf3858865e6f3f
+    measured: '2026-09-09'
+    gen_digest: sha256:04a4797494428f1e
