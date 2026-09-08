@@ -32,7 +32,6 @@ module mkDma#(DmaCfg cfg)(DmaIfc#(aw, dw, channels))
   Reg#(Bit#(TLog#(TAdd#(channels, 1)))) ch <- mkReg(0);
   Reg#(Bit#(32))                cur  <- mkReg(0);   // 已搬字节
   Reg#(Bit#(32))                data <- mkReg(0);
-  Reg#(Bool)                    outstanding <- mkReg(False);
 
   Wire#(Bool)          rdy  <- mkBypassWire;
   Wire#(Bool)          rspV <- mkBypassWire;
@@ -59,8 +58,7 @@ module mkDma#(DmaCfg cfg)(DmaIfc#(aw, dw, channels))
     cur  <= 0;
   endrule
 
-  rule advance (step != Idle && outstanding && rspV);
-    outstanding <= False;
+  rule advance (step != Idle && rspV);
     if (step == Read) begin
       data <= rspX.rdata;
       step <= Write;
@@ -79,13 +77,9 @@ module mkDma#(DmaCfg cfg)(DmaIfc#(aw, dw, channels))
     end
   endrule
 
-  rule issue (step != Idle && !outstanding && rdy);
-    outstanding <= True;
-  endrule
-
   interface regs = r.regs;
   interface RegManager mem;
-    method Bool valid = step != Idle && !outstanding;
+    method Bool valid = step != Idle;
     method RegReq#(32, 32) req = RegReq {
       addr:  (step == Read ? r.src[ch] : r.dst[ch]) + cur,
       write: step == Write,
