@@ -1,0 +1,37 @@
+ip: dma
+contract: { aw: 12, dw: 32 }
+base: 0x10008000
+size: 0x1000
+params: [channels]
+regs:
+  - name: ctrl
+    offset: 0x000
+    desc: global control
+    fields:
+      - { name: en,  bits: "0:0", sw: rw, hw: r, reset: 0 }
+      - { name: rst, bits: "1:1", sw: rw, hw: r, reset: 0 }
+  - name: src
+    offset: 0x100
+    desc: source address per channel
+    array: { count: channels, stride: 16 }
+    fields: [ { name: val, width: 32, sw: rw, hw: r, reset: 0 } ]
+  - name: dst
+    offset: 0x104
+    desc: destination address per channel
+    array: { count: channels, stride: 16 }
+    fields: [ { name: val, width: 32, sw: rw, hw: r, reset: 0 } ]
+  - name: len
+    offset: 0x108
+    desc: byte count per channel
+    array: { count: channels, stride: 16 }
+    fields: [ { name: val, width: 24, sw: rw, hw: r, reset: 0 } ]
+  - name: desc
+    offset: 0x300
+    desc: scatter gather descriptor pointer
+    feature: sg
+    fields: [ { name: val, width: 32, sw: rw, hw: r, reset: 0 } ]
+  - name: ista
+    offset: 0x400
+    desc: done status, write one to clear
+    fields:
+      - { name: val, width: 8, sw: rw, onwrite: woclr, hw: r, hwset: true, stickybit: true, reset: 0 }

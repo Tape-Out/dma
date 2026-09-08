@@ -1,0 +1,29 @@
+name: dma
+version: 0.1.0
+spec: "0.1"
+kind: ip
+lang: bsv
+identity:
+  slug: dma-tapeout-bsv
+  display_name: DMA controller
+  summary: DMA with scatter gather as a feature.
+  category: peripheral
+  subcategories: [dma]
+  ip_family: dma
+  integration_profile: [apb4-slave]
+  maturity: planned
+contract:
+  version: 1
+  ctrl: { shape: flat, aw: 12, dw: 32 }
+  irq: [ { name: irq, kind: level } ]
+params:
+  channels: { type: int, default: 2, range: [1, 8] }
+features:
+  sg: { type: bool, default: false }
+emit:
+  - kind: bsv
+    package: Dma
+    module: mkDma
+    config_type: DmaCfg
+    interface: DmaIfc
+deps: { hwcore: "^0.1" }
