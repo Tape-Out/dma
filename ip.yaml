@@ -30,6 +30,11 @@ params:
     range:
     - 1
     - 8
+test:
+  # 同 hart：搬运一路顶着请求等响应，不看 ready
+  deadread:
+  - rdy
+
 emit:
 - kind: bsv
   package: Dma
@@ -51,35 +56,35 @@ deps:
 area:
   base:
     points:
-      '1': 2695.84
-      '2': 4127.76
-      '4': 6629.84
-      '8': 11372.48
+      '1': 2624.44
+      '2': 4213.16
+      '4': 6566.28
+      '8': 11392.36
     per: channels
   margin: 0.0186
   model: points-additive
   error:
     bound: 0.011
     sign: over
-    note: parameter curves stored as measured points, features added on top, then
-      lifted by 0.0186 so that no untested combination predicts under; the worst came
-      in 1.36 percent under before the lift
+    note: parameter curves stored as measured points, features added on top, 
+      then lifted by 0.0186 so that no untested combination predicts under; the 
+      worst came in 1.36 percent under before the lift
   measured:
   - at:
       channels: 1
-    um2: 2695.84
+    um2: 2624.44
   - at:
       channels: 2
-    um2: 4127.76
+    um2: 4213.16
   - at:
       channels: 4
-    um2: 6629.84
+    um2: 6566.28
   - at:
       channels: 8
-    um2: 11372.48
+    um2: 11392.36
   corner:
     tool: ecc
     pdk: ics55
     freq_mhz: 100
-    measured: '2026-09-09'
-    gen_digest: sha256:04a4797494428f1e
+    measured: '2026-09-10'
+    gen_digest: sha256:97aace583c8bbce4
