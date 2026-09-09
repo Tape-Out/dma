@@ -3,16 +3,27 @@
 顺带验数组译码——`src`/`dst`/`len` 三个数组步长 16、元素宽 4，
 译码只查外层范围的话它们互相盖着，写 dst 会写进 src。
 
+认矩阵：`channels` 决定例化几个通道。只有一个通道时「写第二通道不该动到第一
+通道」无从谈起，那一步去掉——拿同一个通道冒充等于什么也没验。
+
 结构上有一条要守：**存储只由服务规则写**。测试序列若也去写它，两条规则抢
 同一个写口，而服务规则每拍都要驱动 always_enabled 的 ready/resp、必然更紧急，
 bsc 就把序列规则丢掉——表现是超时。所以源区数据用 mkRegFileLoad 预先装好，
 序列规则只读不写。
 """
+import json
 import pathlib
 import sys
 
 out = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
 out.mkdir(parents=True, exist_ok=True)
+cfg = json.loads(sys.argv[2]) if len(sys.argv) > 2 else {}
+label = cfg.get("label", "")
+ch = int((cfg.get("knobs") or {}).get("channels", 2))
+
+# 通道少于两个就没有「另一个通道」可以互相盖
+second = ('{second}'
+          if ch >= 2 else '      2: noAction;')
 
 SRC_BASE = 0x0000_0100
 DST_BASE = 0x0000_0200
@@ -28,13 +39,14 @@ for i in range(DEPTH):
 hexf = out / "dma_mem.hex"
 hexf.write_text("\n".join(f"{v:08X}" for v in img) + "\n", encoding="utf-8")
 
-(out / "DmaTb.bsv").write_text(f'''package DmaTb;
+(out / f"Dma{label}Tb.bsv").write_text(f'''package Dma{label}Tb;
 
 import RegFile::*;
 import RegIf::*;
 import Dma::*;
 
 // 由 tb/mkdmatb.py 生成，勿手改。
+// 这一点：channels={ch}
 
 Bit#(12) rCTRL = 12'h000;
 Bit#(12) rSRC0 = 12'h100;
@@ -51,8 +63,8 @@ typedef enum {{ Cfg, CheckMap, Go, Wait, Verify, Done }}
   Phase deriving (Bits, Eq);
 
 (* synthesize *)
-module mkDmaTb(Empty);
-  DmaIfc#(12, 32, 2) d <- mkDma(DmaCfg {{ none: ? }});
+module mkDma{label}Tb(Empty);
+  DmaIfc#(12, 32, {ch}) d <- mkDma(DmaCfg {{ none: ? }});
   // 源区数据预先装好，测试序列于是只读不写，不跟服务规则抢写口
   RegFile#(Bit#(8), Bit#(32)) mem <- mkRegFileLoad("{hexf}", 0, {DEPTH - 1});
 
@@ -147,4 +159,4 @@ endmodule
 
 endpackage
 ''', encoding="utf-8")
-print(f"  dma 行为测试台就位，源区 {NWORDS} 字预装在 {hexf.name}")
+print(f"  dma 行为测试台就位：channels={ch}，源区 {NWORDS} 字预装在 {hexf.name}")
