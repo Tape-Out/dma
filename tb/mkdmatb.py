@@ -27,6 +27,8 @@ second = ('{second}'
 
 SRC_BASE = 0x0000_0100
 DST_BASE = 0x0000_0200
+# 尾巴不足一字的那次搬到这里，背景值必须原封不动
+DST2_BASE = 0x0000_0300
 NWORDS = 4
 DEPTH = 256
 
@@ -57,9 +59,11 @@ Bit#(12) rISTA = 12'h400;
 
 Bit#(32) srcBase = 32'h{SRC_BASE:08X};
 Bit#(32) dstBase = 32'h{DST_BASE:08X};
+Bit#(32) dst2Base = 32'h{DST2_BASE:08X};
 Integer  nwords  = {NWORDS};
 
-typedef enum {{ Cfg, CheckMap, Go, Wait, Verify, Done }}
+typedef enum {{ Cfg, CheckMap, Go, Wait, Stop, CheckStop, Verify,
+               Part, WaitPart, CheckPart, Done }}
   Phase deriving (Bits, Eq);
 
 (* synthesize *)
@@ -133,7 +137,27 @@ module mkDma{label}Tb(Empty);
   rule waitDone (ph == Wait);
     let x <- d.regs.access(RegReq {{ addr: rISTA, write: False,
                                      wdata: 0, wstrb: 4'hF }});
-    if (x.rdata[0] == 1) begin ph <= Verify; s <= 0; end
+    if (x.rdata[0] == 1) begin ph <= Stop; s <= 0; end
+  endrule
+
+  // 搬完就该停下。挑通道的条件是「字节数不为零」，而搬完之后没有任何人把它清掉——
+  // 同一个描述符会被反复执行：中断反复置位、目的地被同一份数据反复覆盖、总线一直
+  // 被占着。数据核对那一关看不出来，因为搬的每一遍内容都一样。
+  rule stopping (ph == Stop);
+    if (s == 0) wr(rISTA, 32'h1);      // 先把刚才那一次清掉
+    if (s > 200) begin ph <= CheckStop; s <= 0; end
+    else s <= s + 1;
+  endrule
+
+  rule checkStop (ph == CheckStop);
+    let x <- d.regs.access(RegReq {{ addr: rISTA, write: False,
+                                     wdata: 0, wstrb: 4'hF }});
+    if (x.rdata[0] == 1) begin
+      $display("FAIL the channel ran again on its own after finishing");
+      bad <= True;
+    end
+    ph <= Verify;
+    s  <= 0;
   endrule
 
   rule verify (ph == Verify);
@@ -145,14 +169,48 @@ module mkDma{label}Tb(Empty);
       wrong = True;
     end
     if (wrong) bad <= True;
-    if (s + 1 == fromInteger(nwords)) ph <= Done;
+    if (s + 1 == fromInteger(nwords)) begin ph <= Part; s <= 0; end
     else s <= s + 1;
+  endrule
+
+  // 字节数不是四的倍数：最后一拍只该写剩下的那几个字节。整字写出去会把目的地
+  // 后面的字节一起踩掉，而搬运本身「看起来是对的」——被踩的那几个字节没人核对。
+  rule part (ph == Part);
+    case (s)
+      0: wr(rDST0, dst2Base);
+      1: wr(rLEN0, 6);           // 六个字节：一整字加半字
+      default: noAction;
+    endcase
+    if (s > 2) begin ph <= WaitPart; s <= 0; end
+    else s <= s + 1;
+  endrule
+
+  rule waitPart (ph == WaitPart);
+    let x <- d.regs.access(RegReq {{ addr: rISTA, write: False,
+                                     wdata: 0, wstrb: 4'hF }});
+    if (x.rdata[0] == 1) begin ph <= CheckPart; s <= 0; end
+  endrule
+
+  rule checkPart (ph == CheckPart);
+    Bit#(32) w0 = mem.sub(truncate(dst2Base >> 2));
+    Bit#(32) w1 = mem.sub(truncate((dst2Base >> 2) + 1));
+    Bool wrong = False;
+    if (w0 != 32'hA5A50000) begin
+      $display("FAIL partial move, first word is %08h want a5a50000", w0);
+      wrong = True;
+    end
+    // 背景是 deadbeef，只有低两个字节该被换掉
+    if (w1 != 32'hDEAD0001) begin
+      $display("FAIL a six byte move wrote past the end: %08h want dead0001", w1);
+      wrong = True;
+    end
+    if (wrong) bad <= True;
+    ph <= Done;
   endrule
 
   rule fin (ph == Done);
     if (bad) $display("FAILED");
-    else $display("PASS dma: moved %0d words, and the channel arrays do not overlap",
-                  nwords);
+    else $display("PASS dma: moved %0d words, kept inside a partial tail, stopped, and the channel arrays do not overlap", nwords);
     $finish(bad ? 1 : 0);
   endrule
 endmodule

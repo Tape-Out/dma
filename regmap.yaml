@@ -24,7 +24,9 @@ regs:
     offset: 0x108
     desc: byte count per channel
     array: { count: channels, stride: 16 }
-    fields: [ { name: val, width: 24, sw: rw, hw: r, reset: 0 } ]
+    # 硬件也要写：搬完把它清零。挑通道的条件就是「不为零」，
+    # 没人清的话同一个描述符会被反复执行。
+    fields: [ { name: val, width: 24, sw: rw, hw: rw, reset: 0 } ]
   - name: ista
     offset: 0x400
     desc: done status, write one to clear

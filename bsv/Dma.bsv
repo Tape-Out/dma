@@ -69,6 +69,10 @@ module mkDma#(DmaCfg cfg)(DmaIfc#(aw, dw, channels))
         Bit#(8) hit = 0;
         hit[ch] = 1;
         r.ista_set(hit);
+        // 字节数清零，这一路才算做完。挑通道看的就是它不为零——不清的话
+        // 同一个描述符会被反复执行：中断反复置位、目的地被同一份数据反复
+        // 覆盖、总线一直被占着，而数据核对完全看不出来，每一遍内容都一样。
+        r.len_in(ch, 0);
         step <= Idle;
       end else begin
         cur  <= next;
@@ -80,11 +84,18 @@ module mkDma#(DmaCfg cfg)(DmaIfc#(aw, dw, channels))
   interface regs = r.regs;
   interface RegManager mem;
     method Bool valid = step != Idle;
-    method RegReq#(32, 32) req = RegReq {
-      addr:  (step == Read ? r.src[ch] : r.dst[ch]) + cur,
-      write: step == Write,
-      wdata: data,
-      wstrb: 4'hF };
+    method RegReq#(32, 32) req;
+      // 尾巴不足一整字时只使能剩下的那几个字节。字节数是字节数，而搬运一次走一字，
+      // 整字写出去会把目的地后面的字节一起踩掉——而且核对搬运结果完全看不出来，
+      // 被踩的那几个字节不在任何人的检查范围里。
+      Bit#(32) rem  = zeroExtend(r.len[ch]) - cur;
+      Bit#(4)  tail = (4'b0001 << rem[1:0]) - 1;
+      return RegReq {
+        addr:  (step == Read ? r.src[ch] : r.dst[ch]) + cur,
+        write: step == Write,
+        wdata: data,
+        wstrb: (step == Write && rem < 4) ? tail : 4'hF };
+    endmethod
     method Action ready(Bool v); rdy._write(v); endmethod
     method Action resp(Bool v, RegRsp#(32) x);
       rspV._write(v);
