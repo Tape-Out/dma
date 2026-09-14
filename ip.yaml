@@ -56,10 +56,10 @@ deps:
 area:
   base:
     points:
-      '1': 3001.04
-      '2': 4231.08
-      '4': 6762.0
-      '8': 11879.0
+      '1': 3190.32
+      '2': 4509.4
+      '4': 7123.48
+      '8': 12066.32
     per: channels
   margin: 0.0186
   model: points-additive
@@ -72,20 +72,20 @@ area:
   measured:
   - at:
       channels: 1
-    um2: 3001.04
+    um2: 3190.32
   - at:
       channels: 2
-    um2: 4231.08
+    um2: 4509.4
   - at:
       channels: 4
-    um2: 6762.0
+    um2: 7123.48
   - at:
       channels: 8
-    um2: 11879.0
+    um2: 12066.32
   corner:
     tool: ecc
     pdk: ics55
     freq_mhz: 100
-    measured: '2026-09-11'
+    measured: '2026-09-14'
     toolchain: bsc 2026.01 · yosys 0.68+195 · ecc 0.1.0a11
-    gen_digest: sha256:423ddbf1294f6ff5
+    gen_digest: sha256:f00a61aa93ccf480

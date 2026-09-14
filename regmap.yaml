@@ -32,3 +32,10 @@ regs:
     desc: done status, write one to clear
     fields:
       - { name: val, width: 8, sw: rw, onwrite: woclr, hw: r, hwset: true, stickybit: true, reset: 0 }
+  # 出错单独报，与 ista 同形、写一清零：访存回错，或源、目的不是字对齐。
+  # 原来访存出错被整个忽略，搬到不存在的地址软件看到的是「正常完成」
+  - name: esta
+    offset: 0x404
+    desc: error status, write one to clear
+    fields:
+      - { name: val, width: 8, sw: rw, onwrite: woclr, hw: r, hwset: true, stickybit: true, reset: 0 }

@@ -47,9 +47,18 @@ module mkDma#(DmaCfg cfg)(DmaIfc#(aw, dw, channels))
         any = True;
       end
     if (any) begin
-      ch   <= sel;
-      cur  <= 0;
-      step <= Read;
+      // 访存一次走一字，对端按 addr >> 2 取字：地址不是字对齐时低两位被悄悄丢掉，
+      // 一整字落到对齐后的那个字上。所以不搬，报错、清字节数，一次访存也不发
+      if (r.src[sel][1:0] != 0 || r.dst[sel][1:0] != 0) begin
+        Bit#(8) skew = 0;
+        skew[sel] = 1;
+        r.esta_set(skew);
+        r.len_in(sel, 0);
+      end else begin
+        ch   <= sel;
+        cur  <= 0;
+        step <= Read;
+      end
     end
   endrule
 
@@ -59,7 +68,15 @@ module mkDma#(DmaCfg cfg)(DmaIfc#(aw, dw, channels))
   endrule
 
   rule advance (step != Idle && rspV);
-    if (step == Read) begin
+    if (rspX.err) begin
+      // 访存出错就停在这一路：置错误位、清字节数，不置完成位。原来只看 rspV，
+      // 搬到一个不存在的地址，软件看到的是「正常完成」
+      Bit#(8) fault = 0;
+      fault[ch] = 1;
+      r.esta_set(fault);
+      r.len_in(ch, 0);
+      step <= Idle;
+    end else if (step == Read) begin
       data <= rspX.rdata;
       step <= Write;
     end else begin
@@ -102,7 +119,7 @@ module mkDma#(DmaCfg cfg)(DmaIfc#(aw, dw, channels))
       rspX._write(x);
     endmethod
   endinterface
-  method Bool irq = r.ista != 0;
+  method Bool irq = r.ista != 0 || r.esta != 0;
 endmodule
 
 endpackage
