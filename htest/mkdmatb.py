@@ -56,7 +56,7 @@ import RegFile::*;
 import RegIf::*;
 import Dma::*;
 
-// 由 tb/mkdmatb.py 生成，勿手改。
+// 由 htest/mkdmatb.py 生成，勿手改。
 // 这一点：channels={ch}
 
 Bit#(12) rCTRL = 12'h000;
